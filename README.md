@@ -386,3 +386,17 @@ This payload contains a particular caveat. Index for a particular function chang
 
 A more refined version of this payload is present in this [file](payloads/refined.sh) but the caveat is still present there. A python project where you can run a complete shell (like in SSH) is present [here](titus-shell/) which is free of all such problems.
 
+### 4.1 PoC: Reproducing vulnerability locally
+
+Dependencies other than that for Titus:
+1. Python 3
+
+Steps:
+1. Setup titus-control-plane at commit 8a8bd4c at default ports (7001).
+2. Change directory to `titus-shell/` in this repository.
+3. Install the package dependencies (in a virtual environment maybe) using `pip3 install -r requirements.txt`
+4. Run `python3 shell.py` to start the shell.
+
+### 4.2 Remediation
+
+
