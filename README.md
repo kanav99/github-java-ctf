@@ -30,4 +30,29 @@ predicate isSource(DataFlow::Node source) {
 
 In this snippet, class `TypeConstraintValidator` the interface `javax.validation.ConstraintValidator`. To explain the query, we want such sources for which, there exists such method whose first paramenter is the node itself, and name of the method is `isValid` and the method is a part of a class which extends `javax.validation.ConstraintValidator`.
 
+!(images/1.1.1.png)[]
+
+We see 8 results, but 2 out of these 8 don't override the `isValid` provided by the interface `javax.validation.ConstraintValidator`. We filter them out using this following query -
+
+```codeql
+predicate isSource(DataFlow::Node source) { 
+    exists(Method m, ParameterizedInterface p |
+        source.asParameter() = m.getParameter(0) and
+        m.getName() = "isValid" and 
+        m.getDeclaringType().hasSupertype(p) and
+        p.getSourceDeclaration() instanceof TypeConstraintValidator and
+        m.getAnAnnotation() instanceof OverrideAnnotation
+    )
+}
+```
+
+!(images/1.1.2.png)[]
+
+This query helps us find where all the query could be, but this doesn't help us to find the data that is directly controlled by the user. To find them, thanks to CodeQL we have `RemoteFlowSource` class which points out all the nodes directly controlled by the user. We can use this simple query to find all the sources that are controlled by remote user:
+
+```codeql
+ predicate isSource(DataFlow::Node source) { source instanceof RemoteFlowSource }
+```
+
+### 1.2 Sink
 
