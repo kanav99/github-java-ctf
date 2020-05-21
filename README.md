@@ -377,9 +377,10 @@ Continuing such translation, I managed to run `''.class.forName('javax.script.Sc
 }
 ```
 
-Result - 
-
 ![result](/images/tada.png)
+
+:tada:
+
 
 This payload contains a particular caveat. Index for a particular function changes with different boots. This happens generally for the methods with multiple overloads, like `compile` function which have overloads for both `String` and `Reader`. Hence we need to find the index first. I observed the change of index from 7 to 6. So it's important to first find at what indexes our desired functions are, then we can execute our code.
 
