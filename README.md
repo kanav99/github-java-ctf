@@ -386,6 +386,8 @@ This payload contains a particular caveat. Index for a particular function chang
 
 A more refined version of this payload is present in this [file](payloads/refined.sh) but the caveat is still present there. A python project where you can run a complete shell (like in SSH) is present [here](titus-shell/) which is free of all such problems.
 
+[![asciicast](https://asciinema.org/a/ISMpd2C6Rn1NV1Y2SyyqE8I1P.svg)](https://asciinema.org/a/ISMpd2C6Rn1NV1Y2SyyqE8I1P)
+
 ### 4.1 PoC: Reproducing vulnerability locally
 
 Dependencies other than that for Titus:
