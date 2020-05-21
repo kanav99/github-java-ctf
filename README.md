@@ -114,7 +114,9 @@ select sink, source, sink, "Custom constraint error message contains unsanitized
 
 And as mentioned in the challenge page, I get 0 results.
 
-### 1.4 and 1.5 Partial Flow to the rescue and Identifying a missing taint step
+### 1.4 Partial Flow to the rescue
+
+To debug why we get no result, we use Partial Flow analysis. We know that we have a vulnerability in the file `SchedulingContraintSetValidator.java`, so we set the source to the formal parameter of this method.
 
 ```codeql
 /** 
@@ -157,3 +159,11 @@ where
   )
 select sink, source, sink, "Partial flow from unsanitized user data"
 ```
+
+In the output, we see that flow stops at the return statement of the getters like `getSoftConstraints` and `getHardConstraints`. 
+
+### 1.5 Identifying a missing taint step
+
+As we see in the last step, the code doesn't propagate through the getters. My best bet why this happens is because getters not always point to tainted data. They often point to some static variables, which are not tainted.
+
+
