@@ -385,8 +385,11 @@ Continuing such translation, I managed to run `''.class.forName('javax.script.Sc
 This payload contains a particular caveat. Index for a particular function changes with different boots. This happens generally for the methods with multiple overloads, like `compile` function which have overloads for both `String` and `Reader`. Hence we need to find the index first. I observed the change of index from 7 to 6. So it's important to first find at what indexes our desired functions are, then we can execute our code.
 
 A more refined version of this payload is present in this [file](payloads/refined.sh) but the caveat is still present there. A python project where you can run a complete shell (like in SSH) is present [here](titus-shell/) which is free of all such problems.
-
-[![asciicast](https://asciinema.org/a/ISMpd2C6Rn1NV1Y2SyyqE8I1P.svg)](https://asciinema.org/a/ISMpd2C6Rn1NV1Y2SyyqE8I1P)
+<p align="center">
+  <a href="https://asciinema.org/a/ISMpd2C6Rn1NV1Y2SyyqE8I1P">
+    <img src="https://asciinema.org/a/ISMpd2C6Rn1NV1Y2SyyqE8I1P.svg" />
+  </a>
+</p>
 
 ### 4.1 PoC: Reproducing vulnerability locally
 
