@@ -444,6 +444,9 @@ Steps:
 2. Change directory to `titus-shell/` in this repository.
 3. Install the package dependencies (in a virtual environment maybe) using `pip3 install -r requirements.txt`
 4. Run `python3 shell.py` to start the shell.
+5. Any command you enter would run on the `gateway` container of titus.
+
+If you don't wish to run a shell, just copy the contents of the [refined.sh](/payloads/refined.sh) file and paste it to your shell. You will see that a file `/tmp/pwn` is made in the `gateway` container.
 
 ### 4.2 Remediation
 
