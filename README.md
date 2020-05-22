@@ -54,6 +54,8 @@ This query helps us find where all the vulnerability could be, but this doesn't 
  predicate isSource(DataFlow::Node source) { source instanceof RemoteFlowSource }
 ```
 
+We shall see in section 3.2 as how we used this for making a one-for-all query which can be used to find all such paths where we start from a `RemoteFlowSource` and end at `buildConstraintViolationWithTemplate`
+
 ### 1.2 Sink
 
 As we know where the actual vulnerability exists, i.e. `buildConstraintViolationWithTemplate`, writing the sink was trivial.
@@ -233,6 +235,44 @@ Hurray :tada:! We reached our final destination function. We have fixed the step
 ## Step 2: Second Issue
 
 ## Step 3: Errors and Exceptions
+
+### 3.2 Using RemoteFlowSource
+
+Now we will make use of `RemoteFlowSource` to find all remote user controlled data which finally lead to `buildConstraintViolationWithTemplate`.
+
+As `isValid` function is called by a library function, not inside the source, we need to find the last expressionn which calls a library function that finally lead to the `isValid` functions. To get this we add a breakpoint inside the `isValid` function of `SchedulingConstraintSetValidator.java` just to get a complete call stack, and make a job requests.
+
+![](/images/3.2.1.png)
+
+We observe that the class `DefaultEntitySanitizer` is called which calls `validate` function, which calls some internal library functions that finally lead to `isValid` function. To make it more general, we see that `DefaultEntitySanitizer` extends `EntitySanitizer`, so we set the sink to the `validate` function of `EntitySanitizer` and set the source to `RemoteFlowSource`. 
+
+```codeql
+    override predicate isSource(DataFlow::Node source) { 
+        source instanceof RemoteFlowSource
+    }
+
+    override predicate isSink(DataFlow::Node sink) { 
+        exists(MethodAccess c | 
+            sink.asExpr() = c.getAnArgument() and
+            c.getMethod().hasName("validate") and
+            c.getMethod().getDeclaringType().hasQualifiedName("com.netflix.titus.common.model.sanitizer", "EntitySanitizer")
+        )
+    }
+```
+
+![](/images/3.2.2.png)
+
+(complete query is available [here](/queries/remote-to-validate.ql))
+
+We find 18 such paths. We see that the following types are the source of such paths
+
+* SystemSelector
+* JobDescriptor
+* String
+* ScalableTargetResourceInfo
+* Capacity
+* JobCapacityWithOptionalAttributes
+
 
 ## Step 4: Exploit and Remedition
 
