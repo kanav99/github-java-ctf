@@ -54,7 +54,7 @@ This query helps us find where all the vulnerability could be, but this doesn't 
  predicate isSource(DataFlow::Node source) { source instanceof RemoteFlowSource }
 ```
 
-We shall see in section 3.2 as how we used this for making a one-for-all query which can be used to find all such paths where we start from a `RemoteFlowSource` and end at `buildConstraintViolationWithTemplate`
+We shall see in [section 3.2](#32-using-remoteflowsource) as how we used this to find all such paths where we start from a `RemoteFlowSource` and end at `buildConstraintViolationWithTemplate`
 
 ### 1.2 Sink
 
@@ -273,6 +273,7 @@ We find 18 such paths. We see that the following types are the source of such pa
 * Capacity
 * JobCapacityWithOptionalAttributes
 
+All these are the sources that may be validated and eventually may be a source of an RCE. But as we know that not all types are validated (as in section 1.2), all these reduce to a much smaller number.
 
 ## Step 4: Exploit and Remedition
 
@@ -422,9 +423,11 @@ Continuing such translation, I managed to run `''.class.forName('javax.script.Sc
 :tada:
 
 
-This payload contains a particular caveat. Index for a particular function changes with different boots. This happens generally for the methods with multiple overloads, like `compile` function which have overloads for both `String` and `Reader`. Hence we need to find the index first. I observed the change of index from 7 to 6. So it's important to first find at what indexes our desired functions are, then we can execute our code.
+But this payload contains a particular caveat. Index for a particular function changes with different boots. This happens generally for the methods with multiple overloads, like `compile` function which have overloads for both `String` and `Reader`. Hence we need to find the index first. I observed the change of index from 7 to 6. So it's important to first find at what indexes our desired functions are, then we can execute our code. But `compile` doesn't contain capital letters (I forgot this :p), this problem doesn't pose that much problem for us.
 
-A more refined version of this payload is present in this [file](payloads/refined.sh) but the caveat is still present there. A python project where you can run a complete shell (like in SSH) is present [here](titus-shell/) which is free of all such problems.
+A more refined version of this payload is present in this [file](payloads/refined.sh) (if you need to see only json, see this [file](payloads/refined.json)) but the caveat is still present there. I never experienced a problem, but as we still are using indexes, problem can occur. Best way to handle this is by making a loop of all indexes and fetch the  method's signature and see at which index you see the required method.
+
+A python project where you can run a complete shell (like in SSH) is present [here](titus-shell/) which is free of all such problems.
 <p align="center">
   <a href="https://asciinema.org/a/ISMpd2C6Rn1NV1Y2SyyqE8I1P">
     <img src="https://asciinema.org/a/ISMpd2C6Rn1NV1Y2SyyqE8I1P.svg" />
