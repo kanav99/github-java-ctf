@@ -288,6 +288,35 @@ Our flow reaches the target function :tada:
 
 ## Step 3: Errors and Exceptions
 
+```codeql
+class TryCatchStepper extends TaintTracking::AdditionalTaintStep {
+  override predicate step(DataFlow::Node pred, DataFlow::Node succ) {
+    exists(TryStmt t, CatchClause c, MethodAccess ma, MethodAccess ma2 |
+      // connect try and catch
+      c.getTry() = t and
+      // in catch, the method access would be the successor...
+      ma2 = succ.asExpr() and
+      // restricting to those methods that write something
+      (
+        ma2.getMethod().getName() in ["getMessage", "getStackTrace", "getSuppressed", "toString", "getLocalizedMessage"] or
+        ma2.getMethod().getName().prefix(3) = "get" or
+        ma2.getMethod() instanceof GetterMethod
+      ) and
+      // and it's qualifier should be the error variable.
+      c.getVariable().getAnAccess() = ma2.getQualifier() and
+      // predecessor would be an argument of a method access...
+      ma.getAnArgument() = pred.asExpr() and
+      // which is contained in the try statement
+      ma.getEnclosingStmt().getParent*() = t.getBlock() and
+      // and the method should throw some subtype of the caught clause type
+      ma.getMethod().getAThrownExceptionType().getASupertype*() = c.getACaughtType() and
+      // coz obviously...
+      not pred.asExpr() instanceof Literal
+    )
+  }
+}
+```
+
 ### 3.2 Using RemoteFlowSource
 
 Now we will make use of `RemoteFlowSource` to find all remote user controlled data which finally lead to `buildConstraintViolationWithTemplate`.
