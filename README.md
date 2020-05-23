@@ -96,7 +96,8 @@ class MyTaintTrackingConfig extends TaintTracking::Configuration {
             source.asParameter() = m.getParameter(0) and
             m.getName() = "isValid" and 
             m.getDeclaringType().hasSupertype(p) and
-            p.getSourceDeclaration() instanceof TypeConstraintValidator
+            p.getSourceDeclaration() instanceof TypeConstraintValidator and
+            m.getAnAnnotation() instanceof OverrideAnnotation
         )
     }
 
@@ -104,8 +105,6 @@ class MyTaintTrackingConfig extends TaintTracking::Configuration {
         exists(MethodAccess c | sink.asExpr() = c.getArgument(0) and
             c.getMethod().hasName("buildConstraintViolationWithTemplate"))
     }
-
-    override int explorationLimit() { result =  10 }
 }
 
 
