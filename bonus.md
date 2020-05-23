@@ -42,17 +42,11 @@ class ValidatedField extends Field {
             string validatorClassName, 
             Class validatorClass, 
             Method m | 
-      // connect validatorClassName and validatorClass as they should
       validatorClass.hasName(validatorClassName) and
-      // Check if the particular annotation's type has a `@Constraint` annotation
       constraintAnnotation.getType().getAnAnnotation().getType().hasQualifiedName("javax.validation", "Constraint") and
-      // Get the value of the "validatedBy" in the `@Constraint` annotation and map it's class to validatorClass
       constraintAnnotation.getType().getAnAnnotation().getValue("validatedBy").(ArrayInit).getAnInit().getType().getName() = "Class<" + validatorClassName + ">" and
-      // isValid method should be declared inside the validatorClass
       m.getDeclaringType() = validatorClass and
-      // and it should have a name "isValid"
       m.getName() = "isValid" and
-      // should be in the source
       m.fromSource() and
       this = constraintAnnotation.getAnnotatedElement()
     )
@@ -62,17 +56,11 @@ class ValidatedField extends Field {
     exists(Annotation constraintAnnotation, 
             string validatorClassName, 
             Class validatorClass | 
-      // connect validatorClassName and validatorClass as they should
       validatorClass.hasName(validatorClassName) and
-      // Check if the particular annotation's type has a `@Constraint` annotation
       constraintAnnotation.getType().getAnAnnotation().getType().hasQualifiedName("javax.validation", "Constraint") and
-      // Get the value of the "validatedBy" in the `@Constraint` annotation and map it's class to validatorClass
       constraintAnnotation.getType().getAnAnnotation().getValue("validatedBy").(ArrayInit).getAnInit().getType().getName() = "Class<" + validatorClassName + ">" and
-      // isValid method should be declared inside the validatorClass
       m.getDeclaringType() = validatorClass and
-      // and it should have a name "isValid"
       m.getName() = "isValid" and
-      // should be in the source
       m.fromSource() and
       this = constraintAnnotation.getAnnotatedElement()
     )
@@ -85,17 +73,11 @@ class ValidatedClass extends Class {
             string validatorClassName, 
             Class validatorClass, 
             Method m | 
-      // connect validatorClassName and validatorClass as they should
       validatorClass.hasName(validatorClassName) and
-      // Check if the particular annotation's type has a `@Constraint` annotation
       constraintAnnotation.getType().getAnAnnotation().getType().hasQualifiedName("javax.validation", "Constraint") and
-      // Get the value of the "validatedBy" in the `@Constraint` annotation and map it's class to validatorClass
       constraintAnnotation.getType().getAnAnnotation().getValue("validatedBy").(ArrayInit).getAnInit().getType().getName() = "Class<" + validatorClassName + ">" and
-      // isValid method should be declared inside the validatorClass
       m.getDeclaringType() = validatorClass and
-      // and it should have a name "isValid"
       m.getName() = "isValid" and
-      // should be in the source
       m.fromSource() and
       this = constraintAnnotation.getAnnotatedElement()
     )
@@ -105,17 +87,11 @@ class ValidatedClass extends Class {
     exists(Annotation constraintAnnotation, 
             string validatorClassName, 
             Class validatorClass | 
-      // connect validatorClassName and validatorClass as they should
       validatorClass.hasName(validatorClassName) and
-      // Check if the particular annotation's type has a `@Constraint` annotation
       constraintAnnotation.getType().getAnAnnotation().getType().hasQualifiedName("javax.validation", "Constraint") and
-      // Get the value of the "validatedBy" in the `@Constraint` annotation and map it's class to validatorClass
       constraintAnnotation.getType().getAnAnnotation().getValue("validatedBy").(ArrayInit).getAnInit().getType().getName() = "Class<" + validatorClassName + ">" and
-      // isValid method should be declared inside the validatorClass
       m.getDeclaringType() = validatorClass and
-      // and it should have a name "isValid"
       m.getName() = "isValid" and
-      // should be in the source
       m.fromSource() and
       this = constraintAnnotation.getAnnotatedElement()
     )
