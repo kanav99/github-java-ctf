@@ -123,3 +123,43 @@ class ValidatedClass extends Class {
 }
 
 ```
+
+## Alternate usage of RemoteFlowSource
+
+Now we will make use of `RemoteFlowSource` to find all remote user controlled data which finally lead to `buildConstraintViolationWithTemplate`.
+
+As `isValid` function is called by a library function, not inside the source, we need to find the last expressionn which calls a library function that finally lead to the `isValid` functions. To get this we add a breakpoint inside the `isValid` function of `SchedulingConstraintSetValidator.java` just to get a complete call stack, and make a job requests.
+
+![](/images/3.2.1.png)
+
+We observe that the class `DefaultEntitySanitizer` is called which calls `validate` function, which calls some internal library functions that finally lead to `isValid` function. To make it more general, we see that `DefaultEntitySanitizer` extends `EntitySanitizer`, so we set the sink to the `validate` function of `EntitySanitizer` and set the source to `RemoteFlowSource`. 
+
+```codeql
+    override predicate isSource(DataFlow::Node source) { 
+        source instanceof RemoteFlowSource
+    }
+
+    override predicate isSink(DataFlow::Node sink) { 
+        exists(MethodAccess c | 
+            sink.asExpr() = c.getAnArgument() and
+            c.getMethod().hasName("validate") and
+            c.getMethod().getDeclaringType().hasQualifiedName("com.netflix.titus.common.model.sanitizer", "EntitySanitizer")
+        )
+    }
+```
+
+![](/images/3.2.2.png)
+
+(complete query is available [here](/queries/remote-to-validate.ql))
+
+We find 18 such paths. We see that the following types are the source of such paths
+
+* SystemSelector
+* JobDescriptor
+* String
+* ScalableTargetResourceInfo
+* Capacity
+* JobCapacityWithOptionalAttributes
+
+All these are the sources that may be validated and eventually may be a source of an RCE. But as we know that not all types are validated (as in section 1.2), all these reduce to a much smaller number.
+
