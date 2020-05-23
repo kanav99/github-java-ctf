@@ -283,6 +283,17 @@ class CustomStepper extends TaintTracking::AdditionalTaintStep {
 Our flow reaches the target function :tada:
 
 ## Step 3: Errors and Exceptions
+As stated in the challenge, we have to make a custom step such that if we see a code like this
+
+```java
+try {
+    parse(tainted);
+} catch (Exception e) {
+    sink(e.getMessage())
+}
+```
+
+we should step from `tainted` to `e.getMessage()`, subject to some conditions like the function that the `tainted` variable/expression is passed into should throw a throwable which can be caught by the respective catch clause, the message should be written by the successor expression (using methods like `getMessage()`). So the query I could write is this -
 
 ```codeql
 class TryCatchStepper extends TaintTracking::AdditionalTaintStep {
@@ -313,44 +324,12 @@ class TryCatchStepper extends TaintTracking::AdditionalTaintStep {
 }
 ```
 
-### 3.2 Using RemoteFlowSource
+(I admit that `ma2.getMethod().getName().prefix(3) = "get"` is too general, but it helps when you don't know the inner implementation of the getter.)
 
-Now we will make use of `RemoteFlowSource` to find all remote user controlled data which finally lead to `buildConstraintViolationWithTemplate`.
+As challenge states, I couldn't get any additional paths due to this addition. But on quick evaluation I get completely right results.
 
-As `isValid` function is called by a library function, not inside the source, we need to find the last expressionn which calls a library function that finally lead to the `isValid` functions. To get this we add a breakpoint inside the `isValid` function of `SchedulingConstraintSetValidator.java` just to get a complete call stack, and make a job requests.
+![](/images/3.1.png)
 
-![](/images/3.2.1.png)
-
-We observe that the class `DefaultEntitySanitizer` is called which calls `validate` function, which calls some internal library functions that finally lead to `isValid` function. To make it more general, we see that `DefaultEntitySanitizer` extends `EntitySanitizer`, so we set the sink to the `validate` function of `EntitySanitizer` and set the source to `RemoteFlowSource`. 
-
-```codeql
-    override predicate isSource(DataFlow::Node source) { 
-        source instanceof RemoteFlowSource
-    }
-
-    override predicate isSink(DataFlow::Node sink) { 
-        exists(MethodAccess c | 
-            sink.asExpr() = c.getAnArgument() and
-            c.getMethod().hasName("validate") and
-            c.getMethod().getDeclaringType().hasQualifiedName("com.netflix.titus.common.model.sanitizer", "EntitySanitizer")
-        )
-    }
-```
-
-![](/images/3.2.2.png)
-
-(complete query is available [here](/queries/remote-to-validate.ql))
-
-We find 18 such paths. We see that the following types are the source of such paths
-
-* SystemSelector
-* JobDescriptor
-* String
-* ScalableTargetResourceInfo
-* Capacity
-* JobCapacityWithOptionalAttributes
-
-All these are the sources that may be validated and eventually may be a source of an RCE. But as we know that not all types are validated (as in section 1.2), all these reduce to a much smaller number.
 
 ## Step 4: Exploit and Remedition
 
