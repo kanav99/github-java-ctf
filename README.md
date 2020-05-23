@@ -220,22 +220,26 @@ This time, the flow stops at the HashSet Constructor.
 We just join the two conditions, i.e. through getters and through constructors.
 
 ```codeql
-class StepThroughGetters extends TaintTracking::AdditionalTaintStep {
-
+class CustomStepper extends TaintTracking::AdditionalTaintStep {
   override predicate step(DataFlow::Node pred, DataFlow::Node succ) {
+    exists(MethodAccess ma, GetterMethod m |
+        succ.asExpr() = ma and
+        pred.asExpr() = ma.getQualifier() and
+        ma.getCallee() = m
+    ) or
     exists(MethodAccess ma |
         succ.asExpr() = ma and
-        pred.asExpr() = ma.getQualifier()
+        pred.asExpr() = ma.getQualifier() and
+        ma.getMethod().getName() = "keySet"
     ) or
     exists(ConstructorCall ma |
         succ.asExpr() = ma and
-        ma.getArgument(0) = pred.asExpr()
+        ma.getArgument(0) = pred.asExpr() and
+        ma.getConstructedType().getName() = "HashSet<String>"
     )
   }
 }
-
 ```
-
 
 Hurray :tada:! We reached our final destination function. We have fixed the steps for the `SchedulingConstraintSetValidator.java` file. Other files to go!
 
