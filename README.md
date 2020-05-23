@@ -52,6 +52,7 @@ predicate isSource(DataFlow::Node source) {
 <img src="images/1.1.2.png"/>
 </kbd>
 <br/>
+<br/>
 
 _NOTE_: I attempted the bonus part too, it's writeup is present in the file [bonus.md](bonus.md). Do check it out if the submissions are close enough!
 
