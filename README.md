@@ -52,13 +52,32 @@ predicate isSource(DataFlow::Node source) {
 <img src="images/1.1.2.png"/>
 </kbd>
 
+__BONUS__
+
 This query helps us find where all the vulnerability could be, but this doesn't help us to find the data that is directly controlled by the user. To find them, thanks to CodeQL we have `RemoteFlowSource` class which points out all the nodes directly controlled by the user. We can use this simple query to find all the sources that are controlled by remote user:
 
 ```codeql
  predicate isSource(DataFlow::Node source) { source instanceof RemoteFlowSource }
 ```
+To find all the fields/beans in which tainted data flow from remote sources and then it flows to `isValid` method as a parameter, it is important to first get all the fields/classes that are validated by a particular `isValid` method. For example, `softConstraints` field in `Container` class is validated directly by `SchedulingConstraintValidator.isValid`, `Container` is validated by `SchedulingConstraintSetValidator.isValid`. To get this mapping in CodeQL, first we need to make a memory map how it should be done
 
-We shall see in [section 3.2](#32-using-remoteflowsource) as how we used this to find all such paths where we start from a `RemoteFlowSource` and end at `buildConstraintViolationWithTemplate`
+1. `softConstraints` has an annotation `@SchedulingConstraintValidator.SchedulingConstraint`
+2. Type of this annotation has an annotation `@Constraint(validatedBy = {SchedulingConstraintValidator.class})`
+3. `SchedulingConstraintValidator` has a method `isValid`
+
+We need to translate this in CodeQL
+
+```codeql
+from Annotation constraintAnnotation, string validatorClassName, 
+Class validatorClass, Method m
+where
+validatorClass.hasName(validatorClassName) and
+constraintAnnotation.getType().getAnAnnotation().getType().hasQualifiedName("javax.validation", "Constraint") and
+constraintAnnotation.getType().getAnAnnotation().getValue("validatedBy").(ArrayInit).getAnInit().getType().getName() = "Class<" + validatorClassName + ">" and
+m.getDeclaringType() = validatorClass and
+m.getName() = "isValid"
+select constraintAnnotation.getAnnotatedElement(), m
+```
 
 ### 1.2 Sink
 
