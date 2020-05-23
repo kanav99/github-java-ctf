@@ -177,8 +177,7 @@ As we see in the last step, the code doesn't propagate through the getters. My b
 We need to step through the getters as explained in the last step. For this, we add an addition step where we step from a method access to it's qualifier. As suggested in the challenge, we extend `TaintTracking::AdditionalTaintStep`.
 
 ```codeql
-class StepThroughGetters extends TaintTracking::AdditionalTaintStep {
-
+class CustomStepper extends TaintTracking::AdditionalTaintStep {
   override predicate step(DataFlow::Node pred, DataFlow::Node succ) {
     exists(MethodAccess ma, GetterMethod m |
         succ.asExpr() = ma and
@@ -189,28 +188,32 @@ class StepThroughGetters extends TaintTracking::AdditionalTaintStep {
 }
 
 ```
-We restrict our step only through the getter methods, not through general methods. This time, the flow stops at the HashSet Constructor. But in the output we see that
+We restrict our step only through the getter methods, not through general methods. But in the output we see that
 
 ![](/images/1.6.1.png)
 
-We don't step through `keySet()` method. So we must step through all the methods.
+We don't step through `keySet()` method. So we must step through this method too.
 
 ```codeql
-class StepThroughGetters extends TaintTracking::AdditionalTaintStep {
-
+class CustomStepper extends TaintTracking::AdditionalTaintStep {
   override predicate step(DataFlow::Node pred, DataFlow::Node succ) {
-    exists(MethodAccess ma|
+    exists(MethodAccess ma, GetterMethod m |
         succ.asExpr() = ma and
-        pred.asExpr() = ma.getQualifier()
+        pred.asExpr() = ma.getQualifier() and
+        ma.getCallee() = m
+    ) or
+    exists(MethodAccess ma |
+        succ.asExpr() = ma and
+        pred.asExpr() = ma.getQualifier() and
+        ma.getMethod().getName() = "keySet"
     )
   }
 }
-
 ```
 
 ![](/images/1.6.2.png)
 
-We pass through all the method invocations of any object now.
+This time, the flow stops at the HashSet Constructor.
 
 ### 1.7 Adding taint steps through a constructor
 
