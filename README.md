@@ -245,6 +245,47 @@ Hurray :tada:! We reached our final destination function. We have fixed the step
 
 ## Step 2: Second Issue
 
+To find the issue in the file `SchedulingConstraintValidator.java`, we use the same configuration but with modified query
+
+```codeql
+from MyTaintTrackingConfig cfg, DataFlow::PartialPathNode source, DataFlow::PartialPathNode sink
+where
+  cfg.hasPartialFlow(source, sink, _) and
+  exists(Method m | 
+    source.getNode().asParameter() = m.getParameter(0) and
+    m.getDeclaringType().getName() = "SchedulingConstraintValidator"
+  )
+select sink, source, sink, "Partial flow from unsanitized user data"
+```
+
+![](/images/2.1.png)
+
+The flow stops at `keySet()` call. We need to make it step through `stream()`, `map(...)` and `collect(...)`.
+
+```codeql
+class CustomStepper extends TaintTracking::AdditionalTaintStep {
+  override predicate step(DataFlow::Node pred, DataFlow::Node succ) {
+    exists(MethodAccess ma, GetterMethod m |
+        succ.asExpr() = ma and
+        pred.asExpr() = ma.getQualifier() and
+        ma.getCallee() = m
+    ) or
+    exists(MethodAccess ma |
+        succ.asExpr() = ma and
+        pred.asExpr() = ma.getQualifier() and
+        (ma.getMethod().getName() in ["keySet", "stream", "map", "collect"] )
+    ) or
+    exists(ConstructorCall ma |
+        succ.asExpr() = ma and
+        ma.getArgument(0) = pred.asExpr() and
+        ma.getConstructedType().getName() = "HashSet<String>"
+    )
+  }
+}
+```
+
+Our flow reaches the target function :tada:
+
 ## Step 3: Errors and Exceptions
 
 ### 3.2 Using RemoteFlowSource
