@@ -51,7 +51,7 @@ predicate isSource(DataFlow::Node source) {
 <kbd>
 <img src="images/1.1.2.png"/>
 </kbd>
-
+<br/>
 __BONUS__
 
 This query helps us find where all the vulnerability could be, but this doesn't help us to find the data that is directly controlled by the user. To find them, thanks to CodeQL we have `RemoteFlowSource` class which points out all the nodes directly controlled by the user. We can use this simple query to find all the sources that are controlled by remote user:
@@ -86,6 +86,97 @@ select constraintAnnotation.getAnnotatedElement(), m
 ```
 
 We get a neat mapping of an constraint annotation with it's validator. We can also restrict it to source. Now with this query in our hands, we are ready to map these fields/classes to some remote source.
+
+Using this query, I made new classes `ValidatedClass` and `ValidatedField`
+
+```codeql
+class ValidatedField extends Field {
+  ValidatedField() {
+    exists(Annotation constraintAnnotation, 
+            string validatorClassName, 
+            Class validatorClass, 
+            Method m | 
+      // connect validatorClassName and validatorClass as they should
+      validatorClass.hasName(validatorClassName) and
+      // Check if the particular annotation's type has a `@Constraint` annotation
+      constraintAnnotation.getType().getAnAnnotation().getType().hasQualifiedName("javax.validation", "Constraint") and
+      // Get the value of the "validatedBy" in the `@Constraint` annotation and map it's class to validatorClass
+      constraintAnnotation.getType().getAnAnnotation().getValue("validatedBy").(ArrayInit).getAnInit().getType().getName() = "Class<" + validatorClassName + ">" and
+      // isValid method should be declared inside the validatorClass
+      m.getDeclaringType() = validatorClass and
+      // and it should have a name "isValid"
+      m.getName() = "isValid" and
+      // should be in the source
+      m.fromSource() and
+      this = constraintAnnotation.getAnnotatedElement()
+    )
+  }
+
+  predicate hasValidator(Method m) {
+    exists(Annotation constraintAnnotation, 
+            string validatorClassName, 
+            Class validatorClass | 
+      // connect validatorClassName and validatorClass as they should
+      validatorClass.hasName(validatorClassName) and
+      // Check if the particular annotation's type has a `@Constraint` annotation
+      constraintAnnotation.getType().getAnAnnotation().getType().hasQualifiedName("javax.validation", "Constraint") and
+      // Get the value of the "validatedBy" in the `@Constraint` annotation and map it's class to validatorClass
+      constraintAnnotation.getType().getAnAnnotation().getValue("validatedBy").(ArrayInit).getAnInit().getType().getName() = "Class<" + validatorClassName + ">" and
+      // isValid method should be declared inside the validatorClass
+      m.getDeclaringType() = validatorClass and
+      // and it should have a name "isValid"
+      m.getName() = "isValid" and
+      // should be in the source
+      m.fromSource() and
+      this = constraintAnnotation.getAnnotatedElement()
+    )
+  }
+}
+
+class ValidatedClass extends Class {
+  ValidatedClass() {
+    exists(Annotation constraintAnnotation, 
+            string validatorClassName, 
+            Class validatorClass, 
+            Method m | 
+      // connect validatorClassName and validatorClass as they should
+      validatorClass.hasName(validatorClassName) and
+      // Check if the particular annotation's type has a `@Constraint` annotation
+      constraintAnnotation.getType().getAnAnnotation().getType().hasQualifiedName("javax.validation", "Constraint") and
+      // Get the value of the "validatedBy" in the `@Constraint` annotation and map it's class to validatorClass
+      constraintAnnotation.getType().getAnAnnotation().getValue("validatedBy").(ArrayInit).getAnInit().getType().getName() = "Class<" + validatorClassName + ">" and
+      // isValid method should be declared inside the validatorClass
+      m.getDeclaringType() = validatorClass and
+      // and it should have a name "isValid"
+      m.getName() = "isValid" and
+      // should be in the source
+      m.fromSource() and
+      this = constraintAnnotation.getAnnotatedElement()
+    )
+  }
+
+  predicate hasValidator(Method m) {
+    exists(Annotation constraintAnnotation, 
+            string validatorClassName, 
+            Class validatorClass | 
+      // connect validatorClassName and validatorClass as they should
+      validatorClass.hasName(validatorClassName) and
+      // Check if the particular annotation's type has a `@Constraint` annotation
+      constraintAnnotation.getType().getAnAnnotation().getType().hasQualifiedName("javax.validation", "Constraint") and
+      // Get the value of the "validatedBy" in the `@Constraint` annotation and map it's class to validatorClass
+      constraintAnnotation.getType().getAnAnnotation().getValue("validatedBy").(ArrayInit).getAnInit().getType().getName() = "Class<" + validatorClassName + ">" and
+      // isValid method should be declared inside the validatorClass
+      m.getDeclaringType() = validatorClass and
+      // and it should have a name "isValid"
+      m.getName() = "isValid" and
+      // should be in the source
+      m.fromSource() and
+      this = constraintAnnotation.getAnnotatedElement()
+    )
+  }
+}
+
+```
 
 ### 1.2 Sink
 
