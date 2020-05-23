@@ -71,13 +71,21 @@ We need to translate this in CodeQL
 from Annotation constraintAnnotation, string validatorClassName, 
 Class validatorClass, Method m
 where
-validatorClass.hasName(validatorClassName) and
-constraintAnnotation.getType().getAnAnnotation().getType().hasQualifiedName("javax.validation", "Constraint") and
-constraintAnnotation.getType().getAnAnnotation().getValue("validatedBy").(ArrayInit).getAnInit().getType().getName() = "Class<" + validatorClassName + ">" and
-m.getDeclaringType() = validatorClass and
-m.getName() = "isValid"
+  // connect validatorClassName and validatorClass as they should
+  validatorClass.hasName(validatorClassName) and
+  // Check if the particular annotation's type has a `@Constraint` annotation
+  constraintAnnotation.getType().getAnAnnotation().getType().hasQualifiedName("javax.validation", "Constraint") and
+  // Get the value of the "validatedBy" in the `@Constraint` annotation and map it's class to validatorClass
+  constraintAnnotation.getType().getAnAnnotation().getValue("validatedBy").(ArrayInit).getAnInit().getType().getName() = "Class<" + validatorClassName + ">" and
+  // isValid method should be declared inside the validatorClass
+  m.getDeclaringType() = validatorClass and
+  // and it should have a name "isValid"
+  m.getName() = "isValid"
+
 select constraintAnnotation.getAnnotatedElement(), m
 ```
+
+We get a neat mapping of an constraint annotation with it's validator. We can also restrict it to source. Now with this query in our hands, we are ready to map these fields/classes to some remote source.
 
 ### 1.2 Sink
 
