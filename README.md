@@ -509,5 +509,5 @@ If you don't wish to run a shell, just copy the contents of the [refined.sh](/pa
 
 Running the same query on latest commit on LGTM.com gives me no alerts!
 
-![](lgtm.png)
+![](images/lgtm.png)
 
