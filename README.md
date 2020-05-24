@@ -83,12 +83,12 @@ As we know where the actual vulnerability exists, i.e. `buildConstraintViolation
 
 ```codeql
 predicate isSink(DataFlow::Node sink) { 
-    exists(MethodAccess c, Interface constraintValidatorContext | 
-      sink.asExpr() = c.getArgument(0) and
-      c.getMethod().hasName("buildConstraintViolationWithTemplate") and
-      c.getQualifier().getType() = constraintValidatorContext and
-      constraintValidatorContext.hasQualifiedName("javax.validation", "ConstraintValidatorContext")
-    )
+  exists(MethodAccess sinkFunction, Interface constraintValidatorContext | 
+    sink.asExpr() = sinkFunction.getArgument(0) and
+    sinkFunction.getMethod().hasName("buildConstraintViolationWithTemplate") and
+    sinkFunction.getQualifier().getType() = constraintValidatorContext and
+    constraintValidatorContext.hasQualifiedName("javax.validation", "ConstraintValidatorContext")
+  )
 }
 ```
 
