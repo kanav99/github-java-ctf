@@ -1,6 +1,25 @@
 # GitHub Java CTF Submission: Kanav Gupta
 Submission for the GitHub Security Lab CTF 4: CodeQL and Chill - The Java Edition
 
+Table of Contents -
+  * [Introduction](#introduction)
+  * [Step 1: Data Flow and Taint Tracking Analysis](#step-1-data-flow-and-taint-tracking-analysis)
+     * [1.1 Sources](#11-sources)
+     * [1.2 Sink](#12-sink)
+     * [1.3 TaintTracking Configuration](#13-tainttracking-configuration)
+     * [1.4 Partial Flow to the rescue](#14-partial-flow-to-the-rescue)
+     * [1.5 Identifying a missing taint step](#15-identifying-a-missing-taint-step)
+     * [1.6 Adding additional taint steps](#16-adding-additional-taint-steps)
+     * [1.7 Adding taint steps through a constructor](#17-adding-taint-steps-through-a-constructor)
+  * [Step 2: Second Issue](#step-2-second-issue)
+  * [Step 3: Errors and Exceptions](#step-3-errors-and-exceptions)
+  * [Step 4: Exploit and Remedition](#step-4-exploit-and-remedition)
+     * [Lowercase Remedy](#lowercase-remedy)
+     * [Final Payload](#final-payload)
+     * [4.1 PoC: Reproducing vulnerability locally](#41-poc-reproducing-vulnerability-locally)
+     * [4.2 Remediation](#42-remediation)
+  * [Ending remarks and Feedback](#ending-remarks-and-feedback)
+
 ## Introduction
 
 The challenge introduction aptly summarizes the issue: user controlled data being passed into the Bean Validation library function `ConstraintValidatorContext.buildConstraintViolationWithTemplate` which supports Java EL Expressions. Hence, remote code execution. That might seem to be the end of the issue, but it isn't. Getting an RCE wasn't as easy as just passing an EL expression. Some issues like lowercasing of the user input stopped us from getting the exploit. In this report I explain how I found specific user controlled data which flows into the target function using CodeQL, assess what requirements we have for a successful remote code execution and finally I present the exploit.
