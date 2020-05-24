@@ -330,6 +330,7 @@ As challenge states, I couldn't get any additional paths due to this addition. B
 
 ![](/images/3.1.png)
 
+Final query (without bonus part) is available in the file ![final.ql](queries/final.ql).
 
 ## Step 4: Exploit and Remedition
 
