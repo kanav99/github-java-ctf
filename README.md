@@ -117,22 +117,22 @@ class MyTaintTrackingConfig extends TaintTracking::Configuration {
     MyTaintTrackingConfig() { this = "MyTaintTrackingConfig" }
 
     override predicate isSource(DataFlow::Node source) { 
-      exists(Method m, ParameterizedInterface p, Method m2 |
-          source.asParameter() = m.getParameter(0) and
-          m.hasName("isValid") and 
-          m.getDeclaringType().hasSupertype(p) and
-          p.getSourceDeclaration() instanceof TypeConstraintValidator and
-          m2.hasName("isValid") and
-          m2.getDeclaringType() = p and
-          m.overrides(m2)
+      exists(Method isValid, ParameterizedInterface originalConstrainValidator, Method originalIsValid |
+          source.asParameter() = isValid.getParameter(0) and
+          isValid.hasName("isValid") and 
+          isValid.getDeclaringType().hasSupertype(originalConstrainValidator) and
+          originalConstrainValidator.getSourceDeclaration() instanceof TypeConstraintValidator and
+          originalIsValid.hasName("isValid") and
+          originalIsValid.getDeclaringType() = originalConstrainValidator and
+          isValid.overrides(originalIsValid)
       )
     }
 
     override predicate isSink(DataFlow::Node sink) { 
-      exists(MethodAccess c, Interface constraintValidatorContext | 
-        sink.asExpr() = c.getArgument(0) and
-        c.getMethod().hasName("buildConstraintViolationWithTemplate") and
-        c.getQualifier().getType() = constraintValidatorContext and
+      exists(MethodAccess sinkFunction, Interface constraintValidatorContext | 
+        sink.asExpr() = sinkFunction.getArgument(0) and
+        sinkFunction.getMethod().hasName("buildConstraintViolationWithTemplate") and
+        sinkFunction.getQualifier().getType() = constraintValidatorContext and
         constraintValidatorContext.hasQualifiedName("javax.validation", "ConstraintValidatorContext")
       )
     }
@@ -165,21 +165,25 @@ class MyTaintTrackingConfig extends TaintTracking::Configuration {
     MyTaintTrackingConfig() { this = "MyTaintTrackingConfig" }
 
     override predicate isSource(DataFlow::Node source) { 
-        exists(Method m, ParameterizedInterface p |
-            source.asParameter() = m.getParameter(0) and
-            m.getName() = "isValid" and 
-            m.getDeclaringType().hasSupertype(p) and
-            p.getSourceDeclaration() instanceof TypeConstraintValidator and
-            m.getAnAnnotation() instanceof OverrideAnnotation
-        )
+      exists(Method isValid, ParameterizedInterface originalConstrainValidator, Method originalIsValid |
+          source.asParameter() = isValid.getParameter(0) and
+          isValid.hasName("isValid") and 
+          isValid.getDeclaringType().hasSupertype(originalConstrainValidator) and
+          originalConstrainValidator.getSourceDeclaration() instanceof TypeConstraintValidator and
+          originalIsValid.hasName("isValid") and
+          originalIsValid.getDeclaringType() = originalConstrainValidator and
+          isValid.overrides(originalIsValid)
+      )
     }
 
     override predicate isSink(DataFlow::Node sink) { 
-        exists(MethodAccess c | sink.asExpr() = c.getArgument(0) and
-            c.getMethod().hasName("buildConstraintViolationWithTemplate"))
+      exists(MethodAccess sinkFunction, Interface constraintValidatorContext | 
+        sink.asExpr() = sinkFunction.getArgument(0) and
+        sinkFunction.getMethod().hasName("buildConstraintViolationWithTemplate") and
+        sinkFunction.getQualifier().getType() = constraintValidatorContext and
+        constraintValidatorContext.hasQualifiedName("javax.validation", "ConstraintValidatorContext")
+      )
     }
-
-    override int explorationLimit() { result =  10 }
 }
 
 from MyTaintTrackingConfig cfg, DataFlow::PartialPathNode source, DataFlow::PartialPathNode sink
