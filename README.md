@@ -263,7 +263,7 @@ class CustomStepper extends TaintTracking::AdditionalTaintStep {
     exists(ConstructorCall ma |
         succ.asExpr() = ma and
         ma.getArgument(0) = pred.asExpr() and
-        ma.getConstructedType().getName() = "HashSet<String>"
+        ma.getConstructedType().getErasure().(Class).hasQualifiedName("java.util", "HashSet")
     )
   }
 }
