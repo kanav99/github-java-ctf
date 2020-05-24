@@ -503,7 +503,7 @@ But this payload contains a particular caveat. Index for a particular function c
 
 A more refined version of this payload is present in this [file](payloads/refined.sh) (if you need to see only json, see this [file](payloads/refined.json)) but the caveat is still present there. I never experienced a problem, but as we still are using indexes, problem can occur. Best way to handle this is by making a loop of all indexes and fetch the  method's signature and see at which index you see the required method.
 
-A python project where you can run a complete shell (like in SSH) is present [here](titus-shell/) which is free of all such problems.
+A python project where you can run a complete shell (like in SSH) is present [here](titus-shell/).
 <p align="center">
   <a href="https://asciinema.org/a/ISMpd2C6Rn1NV1Y2SyyqE8I1P">
     <img src="https://asciinema.org/a/ISMpd2C6Rn1NV1Y2SyyqE8I1P.svg" />
@@ -523,6 +523,8 @@ Steps:
 5. Any command you enter would run on the `gateway` container of titus.
 
 If you don't wish to run a shell, just copy the contents of the [refined.sh](/payloads/refined.sh) file and paste it to your shell. You will see that a file `/tmp/pwn` is made in the `gateway` container.
+
+Please note that this is a sort of shell, not a complete shell. So shell builtins (like cd) and redirections (echo abc > a.txt) won't work.
 
 ### 4.2 Remediation
 
