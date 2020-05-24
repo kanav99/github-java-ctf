@@ -40,7 +40,7 @@ class TypeConstraintValidator extends GenericInterface {
 predicate isSource(DataFlow::Node source) { 
     exists(Method m, ParameterizedInterface p |
         source.asParameter() = m.getParameter(0) and
-        m.getName() = "isValid" and 
+        m.hasName("isValid") and 
         m.getDeclaringType().hasSupertype(p) and
         p.getSourceDeclaration() instanceof TypeConstraintValidator
     )
@@ -57,15 +57,19 @@ We see 8 results, but 2 out of these 8 don't override the `isValid` provided by 
 
 ```codeql
 predicate isSource(DataFlow::Node source) { 
-    exists(Method m, ParameterizedInterface p |
+    exists(Method m, ParameterizedInterface p, Method m2 |
         source.asParameter() = m.getParameter(0) and
-        m.getName() = "isValid" and 
+        m.hasName("isValid") and 
         m.getDeclaringType().hasSupertype(p) and
         p.getSourceDeclaration() instanceof TypeConstraintValidator and
-        m.getAnAnnotation() instanceof OverrideAnnotation
+        m2.hasName("isValid") and
+        m2.getDeclaringType() = p and
+        m.overrides(m2)
     )
 }
 ```
+
+Here, `m2` method denotes the actual `isValid` method of the ConstraintValidator interface, which our target `isValid` function overrides.
 
 <kbd>
 <img src="images/1.1.2.png"/>
