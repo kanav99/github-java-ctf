@@ -53,23 +53,21 @@ In this snippet, class `TypeConstraintValidator` the interface `javax.validation
 <img src="images/1.1.1.png" />
 </kbd>
 
-We see 8 results, but 2 out of these 8 don't override the `isValid` provided by the interface `javax.validation.ConstraintValidator`. We filter them out using this following query -
+We see 8 results, but 2 out of these 8 don't override the `isValid` provided by the interface `javax.validation.ConstraintValidator`. We filter them out using this following query (and using better variable names) -
 
 ```codeql
 predicate isSource(DataFlow::Node source) { 
-    exists(Method m, ParameterizedInterface p, Method m2 |
-        source.asParameter() = m.getParameter(0) and
-        m.hasName("isValid") and 
-        m.getDeclaringType().hasSupertype(p) and
-        p.getSourceDeclaration() instanceof TypeConstraintValidator and
-        m2.hasName("isValid") and
-        m2.getDeclaringType() = p and
-        m.overrides(m2)
-    )
+  exists(Method isValid, ParameterizedInterface originalConstrainValidator, Method originalIsValid |
+      source.asParameter() = isValid.getParameter(0) and
+      isValid.hasName("isValid") and 
+      isValid.getDeclaringType().hasSupertype(originalConstrainValidator) and
+      originalConstrainValidator.getSourceDeclaration() instanceof TypeConstraintValidator and
+      originalIsValid.hasName("isValid") and
+      originalIsValid.getDeclaringType() = originalConstrainValidator and
+      isValid.overrides(originalIsValid)
+  )
 }
 ```
-
-Here, `m2` method denotes the actual `isValid` method of the ConstraintValidator interface, which our target `isValid` function overrides.
 
 <kbd>
 <img src="images/1.1.2.png"/>
