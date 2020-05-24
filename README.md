@@ -511,3 +511,6 @@ Running the same query on latest commit on LGTM.com (link - https://lgtm.com/que
 
 ![](images/lgtm.png)
 
+## Ending remarks and Feedback
+
+This was my first use of CodeQL and must say, writing queries was not a pain at all because of the autocomplete feature, thumbs up to that! But the engine takes up a lot of temporary space on laptop, and I happened to be almost running out of space on my laptop. I feel CodeQL is a powerful tool, and I am planning to perform static analysis on firefox after this, thanks to creators of this awesome tool! Cheers!
