@@ -507,4 +507,7 @@ If you don't wish to run a shell, just copy the contents of the [refined.sh](/pa
 
 ### 4.2 Remediation
 
+Running the same query on latest commit on LGTM.com gives me no alerts!
+
+![](lgtm.png)
 
