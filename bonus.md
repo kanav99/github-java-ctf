@@ -145,7 +145,7 @@ We still see 6 results on running the isSource predicate, still no good. Reason 
 
 ## Alternate usage of RemoteFlowSource
 
-Now we will make use of `RemoteFlowSource` to find all remote user controlled data which finally lead to `buildConstraintViolationWithTemplate`.
+As we saw in last section, every isValid is connected to some Remote Source, so it didn't help us in this case. But As we see in the source, not all values that can be validated are actually validated. So to find which remote sources lead to `isValid` function is what we will see below, but I haven't incorporated into the final query yet. 
 
 As `isValid` function is called by a library function, not inside the source, we need to find the last expressionn which calls a library function that finally lead to the `isValid` functions. To get this we add a breakpoint inside the `isValid` function of `SchedulingConstraintSetValidator.java` just to get a complete call stack, and make a job requests.
 
@@ -181,4 +181,3 @@ We find 18 such paths. We see that the following types are the source of such pa
 * JobCapacityWithOptionalAttributes
 
 All these are the sources that may be validated and eventually may be a source of an RCE. But as we know that not all types are validated (as in section 1.2), all these reduce to a much smaller number.
-
