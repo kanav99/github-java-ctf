@@ -85,12 +85,16 @@ As we know where the actual vulnerability exists, i.e. `buildConstraintViolation
 
 ```codeql
 predicate isSink(DataFlow::Node sink) { 
-    exists(MethodAccess c | sink.asExpr() = c.getArgument(0) and
-        c.getMethod().hasName("buildConstraintViolationWithTemplate"))
+    exists(MethodAccess c, Interface constraintValidatorContext | 
+      sink.asExpr() = c.getArgument(0) and
+      c.getMethod().hasName("buildConstraintViolationWithTemplate") and
+      c.getQualifier().getType() = constraintValidatorContext and
+      constraintValidatorContext.hasQualifiedName("javax.validation", "ConstraintValidatorContext")
+    )
 }
 ```
 
-That is, we want all nodes which are first argument to a method call whose name is `buildConstraintViolationWithTemplate`.
+That is, we want all nodes which are first argument to a method call whose name is `buildConstraintViolationWithTemplate` and it should be called by a qualifier of type `javax.validation.ConstraintValidatorContext`.
 
 ![](/images/1.2.1.png)
 We get the expected results.
