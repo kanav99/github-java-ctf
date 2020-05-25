@@ -13,48 +13,48 @@ class TypeConstraintValidator extends GenericInterface {
 
 class CustomStepper extends TaintTracking::AdditionalTaintStep {
   override predicate step(DataFlow::Node pred, DataFlow::Node succ) {
-    exists(MethodAccess ma, GetterMethod m |
-        succ.asExpr() = ma and
-        pred.asExpr() = ma.getQualifier() and
-        ma.getCallee() = m
+    exists(MethodAccess callToGetter, GetterMethod getterMethod |
+        succ.asExpr() = callToGetter and
+        pred.asExpr() = callToGetter.getQualifier() and
+        callToGetter.getCallee() = getterMethod
     ) or
-    exists(MethodAccess ma |
-        succ.asExpr() = ma and
-        pred.asExpr() = ma.getQualifier() and
-        (ma.getMethod().getName() in ["keySet", "stream", "map", "collect"] )
+    exists(MethodAccess callToMethod |
+        succ.asExpr() = callToMethod and
+        pred.asExpr() = callToMethod.getQualifier() and
+        (callToMethod.getMethod().getName() in ["keySet", "stream", "map", "collect"] )
     ) or
-    exists(ConstructorCall ma |
-        succ.asExpr() = ma and
-        ma.getArgument(0) = pred.asExpr() and
-        ma.getConstructedType().getErasure().(Class).hasQualifiedName("java.util", "HashSet")
+    exists(ConstructorCall callToConstructor |
+        succ.asExpr() = callToConstructor and
+        callToConstructor.getArgument(0) = pred.asExpr() and
+        callToConstructor.getConstructedType().getErasure().(Class).hasQualifiedName("java.util", "HashSet")
     )
   }
 }
 
 class TryCatchStepper extends TaintTracking::AdditionalTaintStep {
   override predicate step(DataFlow::Node pred, DataFlow::Node succ) {
-    exists(TryStmt t, CatchClause c, MethodAccess ma, MethodAccess ma2 |
+    exists(TryStmt t, CatchClause c, MethodAccess throwingCall, MethodAccess errorWriter |
       // connect try and catch
       c.getTry() = t and
       // in catch, the method access would be the successor...
-      ma2 = succ.asExpr() and
+      errorWriter = succ.asExpr() and
       // restricting to those methods that write something
       (
-        ma2.getMethod().getName() in [
+        errorWriter.getMethod().getName() in [
           "getMessage", "getStackTrace",
           "getSuppressed", "toString",
           "getLocalizedMessage" ] or
-        ma2.getMethod().getName().prefix(3) = "get" or
-        ma2.getMethod() instanceof GetterMethod
+        errorWriter.getMethod().getName().prefix(3) = "get" or
+        errorWriter.getMethod() instanceof GetterMethod
       ) and
       // and it's qualifier should be the error variable.
-      c.getVariable().getAnAccess() = ma2.getQualifier() and
+      c.getVariable().getAnAccess() = errorWriter.getQualifier() and
       // predecessor would be an argument of a method access...
-      ma.getAnArgument() = pred.asExpr() and
+      throwingCall.getAnArgument() = pred.asExpr() and
       // which is contained in the try statement
-      ma.getEnclosingStmt().getParent*() = t.getBlock() and
+      throwingCall.getEnclosingStmt().getParent*() = t.getBlock() and
       // and the method should throw some subtype of the caught clause type
-      ma.getMethod().getAThrownExceptionType().getASupertype*() = c.getACaughtType() and
+      throwingCall.getMethod().getAThrownExceptionType().getASupertype*() = c.getACaughtType() and
       // coz obviously...
       not pred.asExpr() instanceof Literal
     )
