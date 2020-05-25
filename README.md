@@ -332,33 +332,36 @@ we should step from `tainted` to `e.getMessage()`, subject to some conditions li
 ```codeql
 class TryCatchStepper extends TaintTracking::AdditionalTaintStep {
   override predicate step(DataFlow::Node pred, DataFlow::Node succ) {
-    exists(TryStmt t, CatchClause c, MethodAccess ma, MethodAccess ma2 |
+    exists(TryStmt t, CatchClause c, MethodAccess throwingCall, MethodAccess errorWriter |
       // connect try and catch
       c.getTry() = t and
       // in catch, the method access would be the successor...
-      ma2 = succ.asExpr() and
+      errorWriter = succ.asExpr() and
       // restricting to those methods that write something
       (
-        ma2.getMethod().getName() in ["getMessage", "getStackTrace", "getSuppressed", "toString", "getLocalizedMessage"] or
-        ma2.getMethod().getName().prefix(3) = "get" or
-        ma2.getMethod() instanceof GetterMethod
+        errorWriter.getMethod().getName() in [
+          "getMessage", "getStackTrace",
+          "getSuppressed", "toString",
+          "getLocalizedMessage" ] or
+        errorWriter.getMethod().getName().prefix(3) = "get" or
+        errorWriter.getMethod() instanceof GetterMethod
       ) and
       // and it's qualifier should be the error variable.
-      c.getVariable().getAnAccess() = ma2.getQualifier() and
+      c.getVariable().getAnAccess() = errorWriter.getQualifier() and
       // predecessor would be an argument of a method access...
-      ma.getAnArgument() = pred.asExpr() and
+      throwingCall.getAnArgument() = pred.asExpr() and
       // which is contained in the try statement
-      ma.getEnclosingStmt().getParent*() = t.getBlock() and
+      throwingCall.getEnclosingStmt().getParent*() = t.getBlock() and
       // and the method should throw some subtype of the caught clause type
-      ma.getMethod().getAThrownExceptionType().getASupertype*() = c.getACaughtType() and
-      // coz obviously...
+      throwingCall.getMethod().getAThrownExceptionType().getASupertype*() = c.getACaughtType() and
+      // because it shows so many false positives.
       not pred.asExpr() instanceof Literal
     )
   }
 }
 ```
 
-(I admit that `ma2.getMethod().getName().prefix(3) = "get"` is too general, but it helps when you don't know the inner implementation of the getter.)
+(I admit that `errorWriter.getMethod().getName().prefix(3) = "get"` is too general, but it helps when you don't know the inner implementation of the getter. Also, we can make it specific to our case later according to our project)
 
 As challenge states, I couldn't get any additional paths due to this addition. But on quick evaluation I get completely right results.
 
