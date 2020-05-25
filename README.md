@@ -209,10 +209,10 @@ We need to step through the getters as explained in the last step. For this, we 
 ```codeql
 class CustomStepper extends TaintTracking::AdditionalTaintStep {
   override predicate step(DataFlow::Node pred, DataFlow::Node succ) {
-    exists(MethodAccess ma, GetterMethod m |
-        succ.asExpr() = ma and
-        pred.asExpr() = ma.getQualifier() and
-        ma.getCallee() = m
+    exists(MethodAccess callToGetter, GetterMethod getterMethod |
+        succ.asExpr() = callToGetter and
+        pred.asExpr() = callToGetter.getQualifier() and
+        callToGetter.getCallee() = getterMethod
     )
   }
 }
@@ -232,10 +232,10 @@ class CustomStepper extends TaintTracking::AdditionalTaintStep {
         pred.asExpr() = ma.getQualifier() and
         ma.getCallee() = m
     ) or
-    exists(MethodAccess ma |
-        succ.asExpr() = ma and
-        pred.asExpr() = ma.getQualifier() and
-        ma.getMethod().getName() = "keySet"
+    exists(MethodAccess callToMethod |
+        succ.asExpr() = callToMethod and
+        pred.asExpr() = callToMethod.getQualifier() and
+        callToMethod.getMethod().getName() = "keySet"
     )
   }
 }
@@ -257,15 +257,15 @@ class CustomStepper extends TaintTracking::AdditionalTaintStep {
         pred.asExpr() = ma.getQualifier() and
         ma.getCallee() = m
     ) or
-    exists(MethodAccess ma |
-        succ.asExpr() = ma and
-        pred.asExpr() = ma.getQualifier() and
-        ma.getMethod().getName() = "keySet"
+    exists(MethodAccess callToMethod |
+        succ.asExpr() = callToMethod and
+        pred.asExpr() = callToMethod.getQualifier() and
+        callToMethod.getMethod().getName() = "keySet"
     ) or
-    exists(ConstructorCall ma |
-        succ.asExpr() = ma and
-        ma.getArgument(0) = pred.asExpr() and
-        ma.getConstructedType().getErasure().(Class).hasQualifiedName("java.util", "HashSet")
+    exists(ConstructorCall callToConstructor |
+        succ.asExpr() = callToConstructor and
+        callToConstructor.getArgument(0) = pred.asExpr() and
+        callToConstructor.getConstructedType().getErasure().(Class).hasQualifiedName("java.util", "HashSet")
     )
   }
 }
@@ -295,20 +295,20 @@ The flow stops at `keySet()` call. We need to make it step through `stream()`, `
 ```codeql
 class CustomStepper extends TaintTracking::AdditionalTaintStep {
   override predicate step(DataFlow::Node pred, DataFlow::Node succ) {
-    exists(MethodAccess ma, GetterMethod m |
-        succ.asExpr() = ma and
-        pred.asExpr() = ma.getQualifier() and
-        ma.getCallee() = m
+    exists(MethodAccess callToGetter, GetterMethod getterMethod |
+        succ.asExpr() = callToGetter and
+        pred.asExpr() = callToGetter.getQualifier() and
+        callToGetter.getCallee() = getterMethod
     ) or
-    exists(MethodAccess ma |
-        succ.asExpr() = ma and
-        pred.asExpr() = ma.getQualifier() and
-        (ma.getMethod().getName() in ["keySet", "stream", "map", "collect"] )
+    exists(MethodAccess callToMethod |
+        succ.asExpr() = callToMethod and
+        pred.asExpr() = callToMethod.getQualifier() and
+        (callToMethod.getMethod().getName() in ["keySet", "stream", "map", "collect"] )
     ) or
-    exists(ConstructorCall ma |
-        succ.asExpr() = ma and
-        ma.getArgument(0) = pred.asExpr() and
-        ma.getConstructedType().getErasure().(Class).hasQualifiedName("java.util", "HashSet")
+    exists(ConstructorCall callToConstructor |
+        succ.asExpr() = callToConstructor and
+        callToConstructor.getArgument(0) = pred.asExpr() and
+        callToConstructor.getConstructedType().getErasure().(Class).hasQualifiedName("java.util", "HashSet")
     )
   }
 }
