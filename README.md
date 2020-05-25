@@ -546,7 +546,7 @@ Please note that this is a sort of shell, not a complete shell. So shell builtin
 
 ### 4.2 Remediation
 
-Running the same query on latest commit on LGTM.com (link - https://lgtm.com/query/667639841955693170/) gives me no alerts!
+Running the same query on latest commit on LGTM.com (link - https://lgtm.com/query/3543348055529973809/) gives me no alerts!
 
 ![](images/lgtm.png)
 
