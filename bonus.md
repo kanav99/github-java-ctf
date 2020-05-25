@@ -103,38 +103,39 @@ class ValidatedClass extends Class {
 With the help of our convinient classes, we change our defination of `isSource` to -
 
 ```codeql
-    override predicate isSource(DataFlow::Node source) { 
-        exists(Method m, ParameterizedInterface p |
-            source.asParameter() = m.getParameter(0) and
-            m.getName() = "isValid" and 
-            m.getDeclaringType().hasSupertype(p) and
-            p.getSourceDeclaration() instanceof TypeConstraintValidator and
-            m.getAnAnnotation() instanceof OverrideAnnotation and
-            (
-              exists(RemoteFlowSource r, ValidatedClass c |
-                c.hasValidator(m) and (
-                  r.asParameter().getType().getName() = c.getName() or
-                  r.asParameter().getType().(Class).getAField().getType().getName() = c.getName() or
-                  r.asParameter().getType().(Class).getAField().getType().(Class).getAField().getType().getName() = c.getName()
-                )
+   override predicate isSource(DataFlow::Node source) { 
+      exists(Method isValid, ParameterizedInterface originalConstrainValidator, Method originalIsValid |
+          source.asParameter() = isValid.getParameter(0) and
+          isValid.hasName("isValid") and 
+          isValid.getDeclaringType().hasSupertype(originalConstrainValidator) and
+          originalConstrainValidator.getSourceDeclaration() instanceof TypeConstraintValidator and
+          originalIsValid.hasName("isValid") and
+          originalIsValid.getDeclaringType() = originalConstrainValidator and
+          isValid.overrides(originalIsValid) and
+          (
+            exists(RemoteFlowSource r, ValidatedClass c |
+              c.hasValidator(isValid) and (
+                r.asParameter().getType().getName() = c.getName() or
+                r.asParameter().getType().(Class).getAField().getType().getName() = c.getName() or
+                r.asParameter().getType().(Class).getAField().getType().(Class).getAField().getType().getName() = c.getName()
               )
-              or
-              exists(RemoteFlowSource r, ValidatedField f, Class c1, Class c2, Class c3 |
-                f.hasValidator(m) and (
-                  r.asParameter().getType().getName() = c1.getName() and
-                  c1.getAField().getType().getName() = c2.getName() and
-                  c2.getAField().getType().getName() = c3.getName() and
-                  (
-                    c1.getAField() = f or
-                    c2.getAField() = f or
-                    c3.getAField() = f
-                  )
+            )
+            or
+            exists(RemoteFlowSource r, ValidatedField f, Class c1, Class c2, Class c3 |
+              f.hasValidator(isValid) and (
+                r.asParameter().getType().getName() = c1.getName() and
+                c1.getAField().getType().getName() = c2.getName() and
+                c2.getAField().getType().getName() = c3.getName() and
+                (
+                  c1.getAField() = f or
+                  c2.getAField() = f or
+                  c3.getAField() = f
                 )
               )
             )
-        )
+          )
+      )
     }
-
 ```
 
 In this, we basically see the types of remote input, and see if any of it's field, or field of a field, or field of a field of a field (we limit to 3 only, though we can write a transitive closure for such usage) is validated by a `isValid` function.
