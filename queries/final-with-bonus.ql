@@ -13,20 +13,20 @@ class TypeConstraintValidator extends GenericInterface {
 
 class CustomStepper extends TaintTracking::AdditionalTaintStep {
   override predicate step(DataFlow::Node pred, DataFlow::Node succ) {
-    exists(MethodAccess ma, GetterMethod m |
-        succ.asExpr() = ma and
-        pred.asExpr() = ma.getQualifier() and
-        ma.getCallee() = m
+    exists(MethodAccess callToGetter, GetterMethod getterMethod |
+        succ.asExpr() = callToGetter and
+        pred.asExpr() = callToGetter.getQualifier() and
+        callToGetter.getCallee() = getterMethod
     ) or
-    exists(MethodAccess ma |
-        succ.asExpr() = ma and
-        pred.asExpr() = ma.getQualifier() and
-        (ma.getMethod().getName() in ["keySet", "stream", "map", "collect"] )
+    exists(MethodAccess callToMethod |
+        succ.asExpr() = callToMethod and
+        pred.asExpr() = callToMethod.getQualifier() and
+        (callToMethod.getMethod().getName() in ["keySet", "stream", "map", "collect"] )
     ) or
-    exists(ConstructorCall ma |
-        succ.asExpr() = ma and
-        ma.getArgument(0) = pred.asExpr() and
-        ma.getConstructedType().getName() = "HashSet<String>"
+    exists(ConstructorCall callToConstructor |
+        succ.asExpr() = callToConstructor and
+        callToConstructor.getArgument(0) = pred.asExpr() and
+        callToConstructor.getConstructedType().getErasure().(Class).hasQualifiedName("java.util", "HashSet")
     )
   }
 }
@@ -65,23 +65,23 @@ class MyTaintTrackingConfig extends TaintTracking::Configuration {
     MyTaintTrackingConfig() { this = "MyTaintTrackingConfig" }
 
     override predicate isSource(DataFlow::Node source) { 
-        exists(Method m, ParameterizedInterface p |
-            source.asParameter() = m.getParameter(0) and
-            m.getName() = "isValid" and 
-            m.getDeclaringType().hasSupertype(p) and
-            p.getSourceDeclaration() instanceof TypeConstraintValidator and
-            m.getAnAnnotation() instanceof OverrideAnnotation and
+        exists(Method isValid, ParameterizedInterface originalConstrainValidator, RemoteFlowSource r |
+            source.asParameter() = isValid.getParameter(0) and
+            isValid.hasName("isValid") and 
+            isValid.getDeclaringType().hasSupertype(originalConstrainValidator) and
+            originalConstrainValidator.getSourceDeclaration() instanceof TypeConstraintValidator and
+            isValid.getAnAnnotation() instanceof OverrideAnnotation and
             (
-              exists(RemoteFlowSource r, ValidatedClass c |
-                c.hasValidator(m) and (
+              exists(ValidatedClass c |
+                c.hasValidator(isValid) and (
                   r.asParameter().getType().getName() = c.getName() or
                   r.asParameter().getType().(Class).getAField().getType().getName() = c.getName() or
                   r.asParameter().getType().(Class).getAField().getType().(Class).getAField().getType().getName() = c.getName()
                 )
               )
               or
-              exists(RemoteFlowSource r, ValidatedField f, Class c1, Class c2, Class c3 |
-                f.hasValidator(m) and (
+              exists(ValidatedField f, Class c1, Class c2, Class c3 |
+                f.hasValidator(isValid) and (
                   r.asParameter().getType().getName() = c1.getName() and
                   c1.getAField().getType().getName() = c2.getName() and
                   c2.getAField().getType().getName() = c3.getName() and
@@ -105,42 +105,26 @@ class MyTaintTrackingConfig extends TaintTracking::Configuration {
 class ValidatedField extends Field {
   ValidatedField() {
     exists(Annotation constraintAnnotation, 
-            string validatorClassName, 
-            Class validatorClass, 
-            Method m | 
-      // connect validatorClassName and validatorClass as they should
-      validatorClass.hasName(validatorClassName) and
-      // Check if the particular annotation's type has a `@Constraint` annotation
-      constraintAnnotation.getType().getAnAnnotation().getType().hasQualifiedName("javax.validation", "Constraint") and
-      // Get the value of the "validatedBy" in the `@Constraint` annotation and map it's class to validatorClass
-      constraintAnnotation.getType().getAnAnnotation().getValue("validatedBy").(ArrayInit).getAnInit().getType().getName() = "Class<" + validatorClassName + ">" and
-      // isValid method should be declared inside the validatorClass
-      m.getDeclaringType() = validatorClass and
-      // and it should have a name "isValid"
-      m.getName() = "isValid" and
-      // should be in the source
-      m.fromSource() and
-      this = constraintAnnotation.getAnnotatedElement()
+           Annotation descriptionAnnotation,
+           Class validatorClass, Method m | 
+        descriptionAnnotation = constraintAnnotation.getType().getAnAnnotation() and
+        descriptionAnnotation.getType().hasQualifiedName("javax.validation", "Constraint") and
+        descriptionAnnotation.getValue("validatedBy").(ArrayInit).getAnInit().(TypeLiteral).getTypeName().getType() = validatorClass and
+        m.getDeclaringType() = validatorClass and
+        m.getName() = "isValid" and
+        this = constraintAnnotation.getAnnotatedElement()
     )
   }
 
   predicate hasValidator(Method m) {
     exists(Annotation constraintAnnotation, 
-            string validatorClassName, 
-            Class validatorClass | 
-      // connect validatorClassName and validatorClass as they should
-      validatorClass.hasName(validatorClassName) and
-      // Check if the particular annotation's type has a `@Constraint` annotation
-      constraintAnnotation.getType().getAnAnnotation().getType().hasQualifiedName("javax.validation", "Constraint") and
-      // Get the value of the "validatedBy" in the `@Constraint` annotation and map it's class to validatorClass
-      constraintAnnotation.getType().getAnAnnotation().getValue("validatedBy").(ArrayInit).getAnInit().getType().getName() = "Class<" + validatorClassName + ">" and
-      // isValid method should be declared inside the validatorClass
-      m.getDeclaringType() = validatorClass and
-      // and it should have a name "isValid"
-      m.getName() = "isValid" and
-      // should be in the source
-      m.fromSource() and
-      this = constraintAnnotation.getAnnotatedElement()
+           Annotation descriptionAnnotation, 
+           Class validatorClass | 
+        descriptionAnnotation = constraintAnnotation.getType().getAnAnnotation() and
+        descriptionAnnotation.getType().hasQualifiedName("javax.validation", "Constraint") and
+        descriptionAnnotation.getValue("validatedBy").(ArrayInit).getAnInit().(TypeLiteral).getTypeName().getType() = validatorClass and
+        m.getDeclaringType() = validatorClass and
+        this = constraintAnnotation.getAnnotatedElement()
     )
   }
 }
@@ -148,42 +132,26 @@ class ValidatedField extends Field {
 class ValidatedClass extends Class {
   ValidatedClass() {
     exists(Annotation constraintAnnotation, 
-            string validatorClassName, 
-            Class validatorClass, 
-            Method m | 
-      // connect validatorClassName and validatorClass as they should
-      validatorClass.hasName(validatorClassName) and
-      // Check if the particular annotation's type has a `@Constraint` annotation
-      constraintAnnotation.getType().getAnAnnotation().getType().hasQualifiedName("javax.validation", "Constraint") and
-      // Get the value of the "validatedBy" in the `@Constraint` annotation and map it's class to validatorClass
-      constraintAnnotation.getType().getAnAnnotation().getValue("validatedBy").(ArrayInit).getAnInit().getType().getName() = "Class<" + validatorClassName + ">" and
-      // isValid method should be declared inside the validatorClass
-      m.getDeclaringType() = validatorClass and
-      // and it should have a name "isValid"
-      m.getName() = "isValid" and
-      // should be in the source
-      m.fromSource() and
-      this = constraintAnnotation.getAnnotatedElement()
+           Annotation descriptionAnnotation,
+           Class validatorClass, Method m | 
+        descriptionAnnotation = constraintAnnotation.getType().getAnAnnotation() and
+        descriptionAnnotation.getType().hasQualifiedName("javax.validation", "Constraint") and
+        descriptionAnnotation.getValue("validatedBy").(ArrayInit).getAnInit().(TypeLiteral).getTypeName().getType() = validatorClass and
+        m.getDeclaringType() = validatorClass and
+        m.getName() = "isValid" and
+        this = constraintAnnotation.getAnnotatedElement().(Class).getErasure()
     )
   }
 
   predicate hasValidator(Method m) {
     exists(Annotation constraintAnnotation, 
-            string validatorClassName, 
-            Class validatorClass | 
-      // connect validatorClassName and validatorClass as they should
-      validatorClass.hasName(validatorClassName) and
-      // Check if the particular annotation's type has a `@Constraint` annotation
-      constraintAnnotation.getType().getAnAnnotation().getType().hasQualifiedName("javax.validation", "Constraint") and
-      // Get the value of the "validatedBy" in the `@Constraint` annotation and map it's class to validatorClass
-      constraintAnnotation.getType().getAnAnnotation().getValue("validatedBy").(ArrayInit).getAnInit().getType().getName() = "Class<" + validatorClassName + ">" and
-      // isValid method should be declared inside the validatorClass
-      m.getDeclaringType() = validatorClass and
-      // and it should have a name "isValid"
-      m.getName() = "isValid" and
-      // should be in the source
-      m.fromSource() and
-      this = constraintAnnotation.getAnnotatedElement()
+           Annotation descriptionAnnotation, 
+           Class validatorClass | 
+        descriptionAnnotation = constraintAnnotation.getType().getAnAnnotation() and
+        descriptionAnnotation.getType().hasQualifiedName("javax.validation", "Constraint") and
+        descriptionAnnotation.getValue("validatedBy").(ArrayInit).getAnInit().(TypeLiteral).getTypeName().getType() = validatorClass and
+        m.getDeclaringType() = validatorClass and
+        this = constraintAnnotation.getAnnotatedElement().(Class).getErasure()
     )
   }
 }
