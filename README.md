@@ -218,7 +218,7 @@ class CustomStepper extends TaintTracking::AdditionalTaintStep {
 }
 
 ```
-We restrict our step only through the getter methods, not through general methods. But in the output we see that
+We restrict our step only through the getter methods, not through general methods. Note that we can also step through only the `getSoftConstraints` and `getHardConstraints` but it is good idea to first start with all getters so that we atleast not miss a case. In the output we see that
 
 ![](/images/1.6.1.png)
 
