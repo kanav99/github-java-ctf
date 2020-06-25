@@ -1,7 +1,7 @@
 # GitHub Java CTF Submission: Kanav Gupta
 
-_UPDATE_: This entry won the first prize :tada:
-Submission for the GitHub Security Lab CTF 4: CodeQL and Chill - The Java Edition
+Submission for the GitHub Security Lab CTF 4: CodeQL and Chill - The Java Edition  
+_UPDATE_: This entry won the first prize :tada:  
 
 Table of Contents -
   * [Introduction](#introduction)
